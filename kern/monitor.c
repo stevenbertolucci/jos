@@ -66,6 +66,8 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	//cprintf("Hello From monitor.c!\n");
 
 	uint32_t *base_pointer = (uint32_t *)read_ebp();
+    struct Eipdebuginfo info;
+    // uint32_t eip_fn_addr = base_pointer[1] - info.eip_fn_addr;
 
     //cprintf("%08x\n", base_pointer);
     //cprintf("%08x\n", base_pointer[0]);
@@ -80,11 +82,19 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 
 	for (;;) {
 
-		cprintf("ebp %x  eip %x  args %08x %08x %08x %08x %08x",
+		cprintf("  ebp %x  eip %x  args %08x %08x %08x %08x %08x",
                 base_pointer, base_pointer[1], base_pointer[2], base_pointer[3],
 			    base_pointer[4], base_pointer[5], base_pointer[6]);
 
 		cprintf("\n");
+
+        debuginfo_eip(base_pointer[1], &info);
+
+        uint32_t eip_fn_addr = base_pointer[1] - info.eip_fn_addr;
+
+        // Print debug info for eip
+        cprintf("         %s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen,
+                info.eip_fn_name, eip_fn_addr);
 
 		base_pointer = (uint32_t *)base_pointer[0];
           //cprintf("%08x\n", base_pointer);
