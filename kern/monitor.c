@@ -25,6 +25,7 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+    { "backtrace", "Stack backtrace:\n", mon_backtrace },
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -61,6 +62,57 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	// LAB 1: Your code here.
     // HINT 1: use read_ebp().
     // HINT 2: print the current ebp on the first line (not current_ebp[0])
+
+	//cprintf("Hello From monitor.c!\n");
+
+	uint32_t *base_pointer = (uint32_t *)read_ebp();
+    struct Eipdebuginfo info;
+    // uint32_t eip_fn_addr = base_pointer[1] - info.eip_fn_addr;
+
+    //cprintf("%08x\n", base_pointer);
+    //cprintf("%08x\n", base_pointer[0]);
+    //cprintf("%08x\n", base_pointer[8]);
+    //cprintf("%08x\n", base_pointer[16]);
+    //cprintf("%08x\n", base_pointer[24]);
+    //cprintf("%08x\n", base_pointer[32]);
+    //cprintf("%08x\n", base_pointer[40]);
+    //cprintf("%08x\n", base_pointer[48]);
+
+	cprintf("Stack backtrace:\n");
+
+	for (;;) {
+
+		cprintf("  ebp %x  eip %x  args %08x %08x %08x %08x %08x",
+                base_pointer, base_pointer[1], base_pointer[2], base_pointer[3],
+			    base_pointer[4], base_pointer[5], base_pointer[6]);
+
+		cprintf("\n");
+
+        debuginfo_eip(base_pointer[1], &info);
+
+        uint32_t eip_fn_addr = base_pointer[1] - info.eip_fn_addr;
+
+        // Print debug info for eip
+        cprintf("         %s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen,
+                info.eip_fn_name, eip_fn_addr);
+
+		base_pointer = (uint32_t *)base_pointer[0];
+          //cprintf("%08x\n", base_pointer);
+          //cprintf("%08x\n", base_pointer[0]);
+          //cprintf("%08x\n", base_pointer[1]);
+          //cprintf("%08x\n", base_pointer[2]);
+          //cprintf("%08x\n", base_pointer[3]);
+          //cprintf("%08x\n", base_pointer[4]);
+          //cprintf("%08x\n", base_pointer[5]);
+          //cprintf("%08x\n", base_pointer[6]);
+
+		if (base_pointer == 0)
+		{
+			break;
+		}
+
+	}
+
 	return 0;
 }
 
