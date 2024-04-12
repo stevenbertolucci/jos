@@ -102,8 +102,17 @@ boot_alloc(uint32_t n)
 	// to a multiple of PGSIZE.
 	//
 	// LAB 2: Your code here.
+	if ( n > 0 )
+	{
+		result = nextfree;
+		nextfree = ROUNDUP(nextfree + n, PGSIZE);
+		return result;
+	} else if ( n == 0)
+	{
+		return nextfree;
+	} else
+		panic("We are out of memory!!!");
 
-	return NULL;
 }
 
 // Set up a two-level page table:
@@ -149,6 +158,11 @@ mem_init(void)
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
 
+	// This hint came from the CS444 Lab Tutorial #3 by OSU on-campus Professor Yipeng Song
+	// Source of tutorial video: https://media.oregonstate.edu/media/t/1_dotywk6v
+	uint32_t memory_size = npages * sizeof(struct PageInfo);
+	pages = boot_alloc(memory_size);
+	memset(pages, 0, memory_size);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -252,11 +266,32 @@ page_init(void)
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
 	size_t i;
-	for (i = 0; i < npages; i++) {
+
+    page_free_list = NULL;              // Make page_free_list NULL
+    pages[0].pp_ref = 1;                // First page in use
+    pages[0].pp_link = page_free_list;  // Point to the next free page list
+    page_free_list = &pages[0];         // Make the first physical page point to
+                                        // page_free_list
+
+    // Now determine make the rest of the base memory is free
+	for (i = 1; i < npages_basemem * PGSIZE; i++) {
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
 	}
+
+    // Now DO NOT make IO Hole [IOPHYSMEM, EXTPHYSMEM) free (pp_ref != 0)
+    for (i = KERNBASE + IOPHYSMEM; i < EXTPHYSMEM; i++)
+    {
+        pages[i].pp_ref = 1;            // Page is in use
+    }
+
+    // Now Determine which extended memory [EXTPHYSMEM) is free or not
+   for (TODO)
+   {
+
+   }
+
 }
 
 //
