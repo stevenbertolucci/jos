@@ -95,7 +95,7 @@ boot_alloc(uint32_t n)
 	// to any kernel code or global variables.
 	if (!nextfree) {
 		extern char end[];
-		nextfree = ROUNDUP((char *) end, PGSIZE);
+		nextfree = ROUNDUP((char *) end + 1, PGSIZE);
 	}
 
 	// Allocate a chunk large enough to hold 'n' bytes, then update
@@ -162,15 +162,17 @@ mem_init(void)
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
 
+    // This hint came from the CS444 Lab Tutorial #3 by OSU on-campus Professor Yipeng Song
+    // Source of tutorial video: https://media.oregonstate.edu/media/t/1_dotywk6v
+    uint32_t memory_size = npages * sizeof(struct PageInfo);
+    pages = boot_alloc(memory_size);
+    memset(pages, 0, memory_size);
+
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
-
-	// This hint came from the CS444 Lab Tutorial #3 by OSU on-campus Professor Yipeng Song
-	// Source of tutorial video: https://media.oregonstate.edu/media/t/1_dotywk6v
-	uint32_t memory_size = npages * sizeof(struct PageInfo);
-	pages = boot_alloc(memory_size);
-	memset(pages, 0, memory_size);
+    uint32_t env_size = NENV * sizeof(struct Env);
+    envs = boot_alloc(env_size);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
