@@ -173,6 +173,7 @@ mem_init(void)
 	// LAB 3: Your code here.
     uint32_t env_size = NENV * sizeof(struct Env);
     envs = boot_alloc(env_size);
+    memset(envs, 0, env_size);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -199,6 +200,8 @@ mem_init(void)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
 
+    uintptr_t phys_addr = PADDR(pages);
+    boot_map_region(kern_pgdir, UPAGES, PTSIZE, phys_addr, PTE_U | PTE_P);
 
 	//////////////////////////////////////////////////////////////////////
 	// Map the 'envs' array read-only by the user at linear address UENVS
@@ -208,8 +211,8 @@ mem_init(void)
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
 
-    uintptr_t phys_addr = PADDR(pages);
-    boot_map_region(kern_pgdir, UPAGES, PTSIZE, phys_addr, PTE_U | PTE_P);
+    uintptr_t phys_addr_envs = PADDR(envs);
+    boot_map_region(kern_pgdir, UENVS, PTSIZE, phys_addr_envs, PTE_U | PTE_P);
 
 
 	//////////////////////////////////////////////////////////////////////
