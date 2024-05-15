@@ -8,11 +8,13 @@
 #include <kern/monitor.h>
 #include <kern/env.h>
 #include <kern/syscall.h>
+
 #include <kern/sched.h>
 #include <kern/kclock.h>
 #include <kern/picirq.h>
 #include <kern/cpu.h>
 #include <kern/spinlock.h>
+
 
 static struct Taskstate ts;
 
@@ -60,14 +62,37 @@ static const char *trapname(int trapno)
 		return excnames[trapno];
 	if (trapno == T_SYSCALL)
 		return "System call";
+
 	if (trapno >= IRQ_OFFSET && trapno < IRQ_OFFSET + 16)
 		return "Hardware Interrupt";
+
 	return "(unknown trap)";
 }
 
 
 // XYZ: write a function declaration here...
 // e.g., void t_divide();
+
+void t_divide();
+void t_debug();
+void t_nmi();
+void t_brkpt();
+void t_oflow();
+void t_bound();
+void t_illop();
+void t_device();
+void t_dblflt();
+void t_tss();
+void t_segnp();
+void t_stack();
+void t_gpflt();
+void t_pgflt();
+void t_fperr();
+void t_align();
+void t_mchk();
+void t_simderr();
+void t_syscall();
+void t_default();
 
 void
 trap_init(void)
@@ -84,6 +109,28 @@ trap_init(void)
      *
      */
 	// LAB 3: Your code here.
+
+    SETGATE(idt[T_DIVIDE], 0, GD_KT, t_divide, 0);
+    SETGATE(idt[T_DEBUG], 1, GD_KT, t_debug, 0);
+    SETGATE(idt[T_NMI], 1, GD_KT, t_nmi, 0);
+    SETGATE(idt[T_BRKPT], 1, GD_KT, t_brkpt, 3);
+    SETGATE(idt[T_OFLOW], 1, GD_KT, t_oflow, 0);
+    SETGATE(idt[T_BOUND], 0, GD_KT, t_bound, 0);
+    SETGATE(idt[T_ILLOP], 0, GD_KT, t_illop, 0);
+    SETGATE(idt[T_DEVICE], 0, GD_KT, t_device, 0);
+    SETGATE(idt[T_DBLFLT], 0, GD_KT, t_dblflt, 0);
+    SETGATE(idt[T_TSS], 0, GD_KT, t_tss, 0);
+    SETGATE(idt[T_SEGNP], 0, GD_KT, t_segnp, 0);
+    SETGATE(idt[T_STACK], 0, GD_KT, t_stack, 0);
+    SETGATE(idt[T_GPFLT], 0, GD_KT, t_gpflt, 0);
+    SETGATE(idt[T_PGFLT], 0, GD_KT, t_pgflt, 0);
+    SETGATE(idt[T_FPERR], 0, GD_KT, t_fperr, 0);
+    SETGATE(idt[T_ALIGN], 0, GD_KT, t_align, 0);
+    SETGATE(idt[T_MCHK], 0, GD_KT, t_mchk, 0);
+    SETGATE(idt[T_SIMDERR], 0, GD_KT, t_simderr, 0);
+    SETGATE(idt[T_SYSCALL], 0, GD_KT, t_syscall, 3);
+    //SETGATE(idt(T_DEFAULT), 0, GD_KT, t_default, 500);
+
 
 	// Per-CPU setup
 	trap_init_percpu();
@@ -118,6 +165,7 @@ trap_init_percpu(void)
 	//
 	// LAB 4: Your code here:
 
+
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
 	ts.ts_esp0 = KSTACKTOP;
@@ -141,6 +189,7 @@ void
 print_trapframe(struct Trapframe *tf)
 {
 	cprintf("TRAP frame at %p from CPU %d\n", tf, cpunum());
+	cprintf("TRAP frame at %p\n", tf);
 	print_regs(&tf->tf_regs);
 	cprintf("  es   0x----%04x\n", tf->tf_es);
 	cprintf("  ds   0x----%04x\n", tf->tf_ds);
@@ -202,6 +251,34 @@ trap_dispatch(struct Trapframe *tf)
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
 
+    // dispatch page_fault
+    switch (tf->tf_trapno) {
+
+        case T_PGFLT:
+        {
+                return page_fault_handler(tf);
+        }
+
+        case T_BRKPT:
+        {
+                return monitor(tf);
+        }
+
+        case T_SYSCALL:
+        {
+            int32_t ret = syscall(tf->tf_regs.reg_eax,
+                    tf->tf_regs.reg_edx,
+                    tf->tf_regs.reg_ecx,
+                    tf->tf_regs.reg_ebx,
+                    tf->tf_regs.reg_edi,
+                    tf->tf_regs.reg_esi
+                    );
+            tf->tf_regs.reg_eax = ret;
+            return;
+        }
+
+    }
+
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)
@@ -228,10 +305,12 @@ trap(struct Trapframe *tf)
 	// sched_yield()
 	if (xchg(&thiscpu->cpu_status, CPU_STARTED) == CPU_HALTED)
 		lock_kernel();
+
 	// Check that interrupts are disabled.  If this assertion
 	// fails, DO NOT be tempted to fix it by inserting a "cli" in
 	// the interrupt path.
 	assert(!(read_eflags() & FL_IF));
+
 
 	if ((tf->tf_cs & 3) == 3) {
 		// Trapped from user mode.
@@ -246,6 +325,12 @@ trap(struct Trapframe *tf)
 			curenv = NULL;
 			sched_yield();
 		}
+
+	cprintf("Incoming TRAP frame at %p\n", tf);
+
+	if ((tf->tf_cs & 3) == 3) {
+		// Trapped from user mode.
+		assert(curenv);
 
 		// Copy trap frame (which is currently on the stack)
 		// into 'curenv->env_tf', so that running the environment
@@ -262,6 +347,7 @@ trap(struct Trapframe *tf)
 	// Dispatch based on what type of trap occurred
 	trap_dispatch(tf);
 
+
 	// If we made it to this point, then no other environment was
 	// scheduled, so we should return to the current environment
 	// if doing so makes sense.
@@ -269,6 +355,10 @@ trap(struct Trapframe *tf)
 		env_run(curenv);
 	else
 		sched_yield();
+
+	// Return to the current environment, which should be running.
+	assert(curenv && curenv->env_status == ENV_RUNNING);
+	env_run(curenv);
 }
 
 
@@ -283,6 +373,11 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
+
+    if ((tf->tf_cs&0x3) == 0)
+    {
+        panic("trap.c: kernel page fault");
+    }
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
@@ -317,6 +412,7 @@ page_fault_handler(struct Trapframe *tf)
 	//   (the 'tf' variable points at 'curenv->env_tf').
 
 	// LAB 4: Your code here.
+
 
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",

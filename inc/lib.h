@@ -16,6 +16,7 @@
 #include <inc/env.h>
 #include <inc/memlayout.h>
 #include <inc/syscall.h>
+
 #include <inc/trap.h>
 
 #define USED(x)		(void)(x)
@@ -74,7 +75,6 @@ envid_t	ipc_find_env(enum EnvType type);
 #define	PTE_SHARE	0x400
 envid_t	fork(void);
 envid_t	sfork(void);	// Challenge!
-
 
 
 /* File open modes */

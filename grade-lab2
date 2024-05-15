@@ -26,3 +26,4 @@ def test_check_page_installed_pgdir():
     r.match(r"check_page_installed_pgdir\(\) succeeded!")
 
 run_tests()
+

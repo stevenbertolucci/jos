@@ -10,6 +10,7 @@
 #include <kern/kclock.h>
 #include <kern/env.h>
 #include <kern/trap.h>
+
 #include <kern/sched.h>
 #include <kern/picirq.h>
 #include <kern/cpu.h>
@@ -47,11 +48,13 @@ i386_init(void)
 	// Starting non-boot CPUs
 	boot_aps();
 
+
 #if defined(TEST)
 	// Don't touch -- used by grading script!
 	ENV_CREATE(TEST, ENV_TYPE_USER);
 #else
 	// Touch all you want.
+
 	ENV_CREATE(user_primes, ENV_TYPE_USER);
 #endif // TEST*
 
@@ -81,7 +84,7 @@ boot_aps(void)
 		if (c == cpus + cpunum())  // We've started already.
 			continue;
 
-		// Tell mpentry.S what stack to use 
+		// Tell mpentry.S what stack to use
 		mpentry_kstack = percpu_kstacks[c - cpus] + KSTKSIZE;
 		// Start the CPU at mpentry_start
 		lapic_startap(c->cpu_id, PADDR(code));
@@ -89,13 +92,20 @@ boot_aps(void)
 		while(c->cpu_status != CPU_STARTED)
 			;
 	}
+
+	ENV_CREATE(user_hello, ENV_TYPE_USER);
+#endif // TEST*
+
+	// We only have one user environment for now, so just run it.
+	env_run(&envs[0]);
+
 }
 
 // Setup code for APs
 void
 mp_main(void)
 {
-	// We are in high EIP now, safe to switch to kern_pgdir 
+	// We are in high EIP now, safe to switch to kern_pgdir
 	lcr3(PADDR(kern_pgdir));
 	cprintf("SMP: CPU %d starting\n", cpunum());
 
