@@ -279,6 +279,10 @@ trap_dispatch(struct Trapframe *tf)
 
     }
 
+    // Handle clock interrupts. Don't forget to acknowledge the
+    // interrupt using lapic_eoi() before calling the scheduler!
+    // LAB 4: Your code here.
+
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)
@@ -326,11 +330,11 @@ trap(struct Trapframe *tf)
 			sched_yield();
 		}
 
-	cprintf("Incoming TRAP frame at %p\n", tf);
+	//cprintf("Incoming TRAP frame at %p\n", tf);
 
-	if ((tf->tf_cs & 3) == 3) {
+	//if ((tf->tf_cs & 3) == 3) {
 		// Trapped from user mode.
-		assert(curenv);
+		//assert(curenv);
 
 		// Copy trap frame (which is currently on the stack)
 		// into 'curenv->env_tf', so that running the environment
@@ -357,8 +361,8 @@ trap(struct Trapframe *tf)
 		sched_yield();
 
 	// Return to the current environment, which should be running.
-	assert(curenv && curenv->env_status == ENV_RUNNING);
-	env_run(curenv);
+	//assert(curenv && curenv->env_status == ENV_RUNNING);
+	//env_run(curenv);
 }
 
 

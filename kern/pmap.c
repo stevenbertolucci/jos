@@ -345,40 +345,6 @@ page_init(void)
 	// free pages!
 	size_t i;
 
-	for (i = 0; i < npages; i++) {
-		pages[i].pp_ref = 0;
-		pages[i].pp_link = page_free_list;
-		page_free_list = &pages[i];
-	}
-
-    // Declare first physical page as in use
-   // page_free_list = NULL;              // Make page_free_list NULL
-   // pages[0].pp_ref = 1;                // First page in use
-   // pages[0].pp_link = page_free_list;  // Point to the next free page list
-   // page_free_list = &pages[0];         // Make the first physical page point to
-                                        // page_free_list
-
-    // Now determine make the rest of the base memory is free
-//	for (i = 1; i < npages_basemem; i++) {
-//		pages[i].pp_ref = 0;
-//		pages[i].pp_link = page_free_list;
-//		page_free_list = &pages[i];
-//	}
-
-    // Now DO NOT make IO Hole [IOPHYSMEM, EXTPHYSMEM) free (pp_ref != 0)
- //   for (i = IOPHYSMEM / PGSIZE; i < PADDR(boot_alloc(0)) / PGSIZE; i++)
- //   {
- //       pages[i].pp_ref = 1;            // Page is in use
- //   }
-
-    // Now Determine which extended memory [EXTPHYSMEM) is free or not
- //   for (; i < npages; i++)
- //   {
- //       pages[i].pp_ref = 0;
- //       pages[i].pp_link = page_free_list;
- //       page_free_list = &pages[i];
- //   }
-
 
     // The hint came from TA during OH and he told me to use one for loop and I
     // almost had the IOPHYSMEM and EXTPHYSMEM correct. He helped me fixed the
@@ -733,7 +699,7 @@ mmio_map_region(physaddr_t pa, size_t size)
 	panic("mmio_map_region not implemented");
 
 	// For now, there is only one address space, so always invalidate.
-	invlpg(va);
+	//invlpg(va);
 }
 
 static uintptr_t user_mem_check_addr;
