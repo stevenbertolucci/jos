@@ -248,12 +248,14 @@ mem_init(void)
 	// Your code goes here:
 
 	// Initialize the SMP-related parts of the memory map
-	mem_init_mp();
+	//mem_init_mp();
 
     uintptr_t phys_addr_kernbase = PADDR((void *)KERNBASE);
     size_t size = (0xffffffff - KERNBASE) + 1;
     boot_map_region(kern_pgdir, KERNBASE, size, phys_addr_kernbase, PTE_W | PTE_P);
 
+    // Initialize the SMP-related parts of the memory map
+    mem_init_mp();
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -303,6 +305,20 @@ mem_init_mp(void)
 	//
 	// LAB 4: Your code here:
 
+    for (int i = 0; i < NCPU; i++)
+    {
+        // Virtual address of the kernal stack top
+        uintptr_t kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+
+        // Virtual address of the where the kernal stack starts
+        uintptr_t kstack_start_i = kstacktop_i - KSTKSIZE;
+
+        // Physical address of the kernal stack
+        //uintptr_t pa_kstacktop_i = PADDR(percpu_kstacks[i]);  <- This was causing the bug!!
+
+        // Map per-CPUs
+        boot_map_region(kern_pgdir, kstack_start_i, KSTKSIZE, PADDR(&percpu_kstacks[i]), PTE_W | PTE_P);
+    }
 }
 
 // --------------------------------------------------------------
@@ -320,11 +336,6 @@ mem_init_mp(void)
 void
 page_init(void)
 {
-
-	// LAB 4:
-	// Change your code to mark the physical page at MPENTRY_PADDR
-	// as in use
-
 
 	// The example code here marks all physical pages as free.
 	// However this is not truly the case.  What memory is free?
@@ -345,18 +356,27 @@ page_init(void)
 	// free pages!
 	size_t i;
 
+    // LAB 4:
+    // Change your code to mark the physical page at MPENTRY_PADDR
+    // as in use
 
     // The hint came from TA during OH and he told me to use one for loop and I
     // almost had the IOPHYSMEM and EXTPHYSMEM correct. He helped me fixed the
     // IO hole in the first else if.
     for (i = 0; i < npages; i++) {
 
-        // Mark first physical page as in use
-        if (i == 0)
+        // Mark physical page at MPENTRY_PADDR as in use
+        if (i == MPENTRY_PADDR / PGSIZE)
         {
             pages[i].pp_ref = 1;
             pages[i].pp_link = NULL;
-        }
+
+        } else if (i == 0) {
+
+            // Mark first physical page as in use
+            pages[i].pp_ref = 1;
+            pages[i].pp_link = NULL;
+       }
 
         // DO NOT make IO Hole free. pp_ref = 1
         else if (i >= IOPHYSMEM / PGSIZE && i < PADDR(boot_alloc(0)) / PGSIZE)
@@ -371,7 +391,9 @@ page_init(void)
             pages[i].pp_link = page_free_list;
             page_free_list = &pages[i];
         }
+
     }
+
 }
 
 //
@@ -696,7 +718,25 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+
+	//panic("mmio_map_region not implemented");
+    uintptr_t pa_start = ROUNDDOWN(pa, PGSIZE);
+    uintptr_t pa_end = ROUNDUP(pa + size, PGSIZE);
+    uintptr_t pa_offset = pa & 0xfff;
+
+    uintptr_t va_start = base;
+    uintptr_t new_base = va_start + (pa_end - pa_start);
+
+    if (new_base > MMIOLIM)
+    {
+        panic("mmio_map overflow");
+    }
+
+    boot_map_region(kern_pgdir, va_start, pa_end - pa_start, pa, PTE_PCD | PTE_PWT | PTE_W);
+
+    base = new_base;
+
+    return (void *)(va_start + pa_offset);
 
 	// For now, there is only one address space, so always invalidate.
 	//invlpg(va);
@@ -756,6 +796,7 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
             return error;
         }
     }
+
 
 	return 0;
 }
@@ -964,10 +1005,6 @@ check_kern_pgdir(void)
 		for (i = 0; i < KSTKGAP; i += PGSIZE)
 			assert(check_va2pa(pgdir, base + i) == ~0);
 	}
-
-	for (i = 0; i < KSTKSIZE; i += PGSIZE)
-		assert(check_va2pa(pgdir, KSTACKTOP - KSTKSIZE + i) == PADDR(bootstack) + i);
-	assert(check_va2pa(pgdir, KSTACKTOP - PTSIZE) == ~0);
 
 	// check PDE permissions
 	for (i = 0; i < NPDENTRIES; i++) {

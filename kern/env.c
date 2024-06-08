@@ -16,12 +16,11 @@
 #include <kern/cpu.h>
 #include <kern/spinlock.h>
 
-struct Env *envs = NULL;		// All environments
-
+struct Env *envs = NULL;		    // All environments
 static struct Env *env_free_list;	// Free environment list
-					// (linked by Env->env_link)
+					                // (linked by Env->env_link)
 
-#define ENVGENSHIFT	12		// >= LOGNENV
+#define ENVGENSHIFT	12		        // >= LOGNENV
 
 // Global descriptor table.
 //
@@ -280,6 +279,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 
 	// Enable interrupts while in user mode.
 	// LAB 4: Your code here.
+    e->env_tf.tf_eflags |= FL_IF;
 
 	// Clear the page fault handler until user installs one.
 	e->env_pgfault_upcall = 0;
@@ -539,12 +539,6 @@ env_destroy(struct Env *e)
 		curenv = NULL;
 		sched_yield();
 	}
-
-	env_free(e);
-
-	cprintf("Destroyed the only environment - nothing more to do!\n");
-	while (1)
-		monitor(NULL);
 }
 
 
@@ -625,6 +619,7 @@ env_run(struct Env *e)
 	// registers and drop into user mode in the
 	// environment. HINT: This function loads the new environment's state
 	// from e->env_tf.
-	env_pop_tf(&curenv->env_tf);
+	unlock_kernel();
+    env_pop_tf(&e->env_tf);
 }
 
