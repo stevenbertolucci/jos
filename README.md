@@ -8,8 +8,8 @@
 
 ## To run
 
-``` make ```
-``` make run-qemu```
+```make```<br>
+```make run-qemu```
 
 ## To Quit Quick Emulator (qemu)
-``` Press 'CRTL-A' then click on 'x' ```
+``` Press 'CRTL + A' then click on 'x' ```
