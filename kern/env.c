@@ -594,10 +594,10 @@ env_run(struct Env *e)
 	// LAB 3: Your code here.
 
 	// Context switch from curenv to env e. If first call, curenv is NULL
-	if (curenv != e)
-	{
+	//if (curenv != e)
+	//{
 		// Set the current env back to ENV_RUNNABLE if it is ENV_RUNNING
-		if (curenv && curenv->env_status == ENV_RUNNABLE)
+		if (curenv && curenv->env_status == ENV_RUNNING)
 		{
 			curenv->env_status = ENV_RUNNABLE;
 		}
@@ -606,14 +606,14 @@ env_run(struct Env *e)
 		curenv = e;
 
 		// Set its status to ENV_RUNNING
-		curenv->env_status = ENV_RUNNING;
+		e->env_status = ENV_RUNNING;
 
 		// Update its 'env_runs' counter
-		curenv->env_runs++;
+	    e->env_runs++;
 
 		// Use lcr3() to switch to its address space
-		lcr3(PADDR(curenv->env_pgdir));
-	}
+		lcr3(PADDR(e->env_pgdir));
+	//}
 
 	// Use env_pop_tf() to restore the environment's
 	// registers and drop into user mode in the
