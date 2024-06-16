@@ -11,4 +11,4 @@
 ```make run-qemu```
 
 ## To Quit Quick Emulator (qemu)
-``` Press 'CTRL + A' then click on 'x' ```
+``` Press 'CTRL + a' then click on 'x' ```
